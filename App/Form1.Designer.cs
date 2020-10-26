@@ -267,9 +267,9 @@
             // 
             // weightsOutput
             // 
-            this.weightsOutput.Enabled = false;
             this.weightsOutput.Location = new System.Drawing.Point(5, 275);
             this.weightsOutput.Name = "weightsOutput";
+            this.weightsOutput.ReadOnly = true;
             this.weightsOutput.Size = new System.Drawing.Size(310, 105);
             this.weightsOutput.TabIndex = 6;
             this.weightsOutput.Text = "";
@@ -299,6 +299,7 @@
             this.minGradeOutput.Enabled = false;
             this.minGradeOutput.Location = new System.Drawing.Point(145, 187);
             this.minGradeOutput.Name = "minGradeOutput";
+            this.minGradeOutput.ReadOnly = true;
             this.minGradeOutput.Size = new System.Drawing.Size(100, 25);
             this.minGradeOutput.TabIndex = 4;
             this.minGradeOutput.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
@@ -308,6 +309,7 @@
             this.studentsAmountOutput.Enabled = false;
             this.studentsAmountOutput.Location = new System.Drawing.Point(145, 88);
             this.studentsAmountOutput.Name = "studentsAmountOutput";
+            this.studentsAmountOutput.ReadOnly = true;
             this.studentsAmountOutput.Size = new System.Drawing.Size(100, 25);
             this.studentsAmountOutput.TabIndex = 4;
             this.studentsAmountOutput.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
@@ -317,6 +319,7 @@
             this.gradesAmountOutput.Enabled = false;
             this.gradesAmountOutput.Location = new System.Drawing.Point(145, 130);
             this.gradesAmountOutput.Name = "gradesAmountOutput";
+            this.gradesAmountOutput.ReadOnly = true;
             this.gradesAmountOutput.Size = new System.Drawing.Size(100, 25);
             this.gradesAmountOutput.TabIndex = 4;
             this.gradesAmountOutput.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;

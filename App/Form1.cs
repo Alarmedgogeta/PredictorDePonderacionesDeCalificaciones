@@ -42,7 +42,7 @@ namespace App
 
             //openFileDialog1.DefaultExt = "xlsx";
 
-            //openFileDialog1.Filter = "Excel Worksheets|*.xls|*.xlsx";
+            openFileDialog1.Filter = "Excel Files|*.xls;*.xlsx";
             openFileDialog1.Multiselect = false;
 
             openFileDialog1.CheckFileExists = true;
@@ -52,36 +52,311 @@ namespace App
             openFileDialog1.ReadOnlyChecked = true;
             openFileDialog1.ShowReadOnly = true;
 
-
-
-            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            if(openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                string file = openFileDialog1.FileName;
-                try
+                string fileExcel = openFileDialog1.FileName;
+
+                Excel.Application myExcel;
+                Excel.Workbook myWorkbook;
+
+                myExcel = new Excel.Application();
+                if (myExcel == null)
                 {
-                    string text = File.ReadAllText(file);
-                    int size = text.Length;
+                    MessageBox.Show("Excel no esta propiamente instalado!!");
+                    return;
                 }
-                catch (IOException)
+                myWorkbook = myExcel.Workbooks.Open(fileExcel);
+                //myExcel.Visible = true;
+
+
+                Excel.Worksheet excelSheet = myWorkbook.Worksheets[1];
+
+                float minGrade = searchMinGrade(excelSheet);
+
+                bool excelValid = true;
+
+                Excel.Range objCell;
+                string cellValue = "";
+                char columName = 'A';
+                int rowNumber = 1;
+                int studentsCount = 0;
+                int gradesCount = 0;
+                Student[] studens;
+                while (!cellValue.Equals("Alumno"))
                 {
+                    objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
+                    cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                    rowNumber++;
+                    if (rowNumber > 10)
+                    {
+                        columName++;
+                        rowNumber = 1;
+                        if (columName.Equals('E'))
+                        {
+                            excelValid = false;
+                            weightsOutput.AppendText("Excel no cumple con un formato valido1");
+                            break;
+                        }
+                    }
+                }
+                if (excelValid)
+                {
+                    int aux = 0;
+                    do
+                    {
+                        studentsCount = aux;
+                        objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
+                        cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                        rowNumber++;
+                    }
+                    while (int.TryParse(cellValue, out aux));
+                    studentsAmountOutput.Value = studentsCount;
+                    rowNumber -= (studentsCount + 2);
+                }
+                studens = new Student[studentsCount];
+                //weightsOutput.AppendText(columName + rowNumber.ToString() + ": " + cellValue + "\n");
+                while (!cellValue.StartsWith("x"))
+                {
+                    columName++;
+                    objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
+                    cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                    if (columName.Equals('S'))
+                    {
+                        excelValid = false;
+                        weightsOutput.AppendText("Excel no cumple con un formato valido2");
+                        break;
+                    }
+                }
+
+                char auxColumName = columName;
+
+                if (excelValid)
+                {
+                    while (cellValue.StartsWith("x"))
+                    {
+                        gradesCount++;
+                        auxColumName++;
+                        objCell = excelSheet.Range[auxColumName + rowNumber.ToString(), Type.Missing];
+                        cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                    }
+                }
+                rowNumber++;
+                int auxRowNumber = rowNumber;
+                if (excelValid)
+                {
+                    float[] grades;
+                    for (int i = 0; i < studentsCount; i++){
+                        grades = new float[gradesCount];
+                        auxColumName = columName;
+                        for (int j = 0; j < gradesCount; j++)
+                        {
+                            objCell = excelSheet.Range[auxColumName + auxRowNumber.ToString(), Type.Missing];
+                            cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                            if(!float.TryParse(cellValue, out grades[j]))
+                            {
+                                excelValid = false;
+                                break;
+                            }
+                            auxColumName++;
+                        }
+                        studens[i] = new Student(grades);
+                        objCell = excelSheet.Range[auxColumName + auxRowNumber.ToString(), Type.Missing];
+                        cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                        studens[i].setAproved(cellValue.Equals("1"));
+                        auxRowNumber++;
+                    }
+                }
+                if (excelValid)
+                {
+                    foreach (Student student in studens)
+                    {
+                        //weightsOutput.AppendText("Estudiante:      ");
+                        foreach (float grade in student.grades)
+                        {
+                            //weightsOutput.AppendText("Nota: " + grade + " ");
+                        }
+                       // weightsOutput.AppendText("Aprobado: " + student.isAproved() + "\n");
+                    }
+                    calculateWeihgtsPosibilities(studens, minGrade);
                 }
             }
-
-            /*using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+            else
             {
-                Excel.Application xlApp = new Excel.Application();
-                Excel.Workbook xlWorkbook = xlApp.Workbooks.Open(@"sandbox_test.xlsx");
-                Excel._Worksheet xlWorksheet = xlWorkbook.Sheets[1];
-                Excel.Range xlRange = xlWorksheet.UsedRange;
-                using (var reader = ExcelReaderFactory.CreateReader(stream))
-                {
-                    var result = reader.AsDataSet();
+                return;
+            }
+        }
+        private float searchMinGrade(Excel.Worksheet excelSheet)
+        {
+            float minGrade = 0;
 
-                    DataTable table = result.Tables[0];
-                    DataRow row = table.Rows[0];
-                    string cell = row[0].ToString();
+            bool excelValid = true;
+
+            Excel.Range objCell;
+            string cellValue = "";
+            char columName = 'A';
+            int rowNumber = 1;
+            while (!cellValue.Equals("Umbral"))
+            {
+                objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
+                cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                rowNumber++;
+                if (rowNumber > 10)
+                {
+                    columName++;
+                    rowNumber = 1;
+                    if (columName.Equals('P'))
+                    {
+                        excelValid = false;
+                        //weightsOutput.ResetText();
+                        weightsOutput.AppendText("Excel no cumple con un formato valido");
+                        break;
+                    }
                 }
-            }*/
+            }
+            if (excelValid)
+            {
+                objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
+                cellValue = objCell.Value == null ? "" : objCell.Value.ToString();
+                float.TryParse(cellValue, out minGrade);
+                //weightsOutput.AppendText(cellValue + "\n");
+                minGradeOutput.Value = (decimal)minGrade;
+            }
+            return minGrade;
+        }
+
+        private void calculateWeihgtsPosibilities(Student[] students, float minGrade)
+        {
+            int gradesAmount = students[0].grades.Length;
+            gradesAmountOutput.Value = gradesAmount;
+            float[] weihgts = new float[gradesAmount];
+
+            Excel.Application myExcel = new Excel.Application();
+            if (myExcel == null)
+            {
+                MessageBox.Show("Excel no esta propiamente instalado!!");
+                return;
+            }
+
+            Excel.Workbook excelBook = myExcel.Workbooks.Add();
+
+            Excel.Worksheet excelSheet = excelBook.Worksheets[1];
+
+            // La primera línea une las celdas y las convierte un en una sola.            
+            excelSheet.Range["A1:E1"].Merge();
+            // La segunda línea Asigna el nombre del encabezado.
+            excelSheet.Range["A1:E1"].Value = "Pesos y umbral";
+            // La tercera línea asigna negrita al titulo.
+            excelSheet.Range["A1:E1"].Font.Bold = true;
+            // La cuarta línea signa un Size a titulo de 15.
+            excelSheet.Range["A1:E1"].Font.Size = 15;
+            excelSheet.Range["A1:E1"].Font.Color = Color.Blue;
+
+            Excel.Range objCell;
+
+
+            objCell = excelSheet.Range["G1", Type.Missing];
+            objCell.Value = "U";
+            objCell = excelSheet.Range["G2", Type.Missing];
+            objCell.Value = minGrade.ToString();
+
+
+            char columName = 'A';
+            int rowNumber = 4;
+            for(int i = 0; i < gradesAmount; i++)
+            {
+                columName++;
+            }
+            columName++;
+
+            printPosibleWeights(excelSheet, gradesAmount, gradesAmount + 2, rowNumber);
+            printPosibleWeights(excelSheet, gradesAmount, gradesAmount + 102, rowNumber);
+            printPosibleWeights(excelSheet, gradesAmount, gradesAmount + 202, rowNumber);
+            rowNumber += 2;
+            printHeadersPosible(excelSheet, gradesAmount, gradesAmount + 1, rowNumber);
+            int columNumber = 1;
+            int auxColumNumber;
+            decimal cellValue;
+            foreach (Student student in students)
+            {
+                auxColumNumber = columNumber;
+                //decimal cellValue; 
+
+                rowNumber++;
+                cellValue = ((decimal)((decimal)student.grades[0] / 10m));
+                excelSheet.Cells[rowNumber, auxColumNumber] = cellValue.ToString();
+                auxColumNumber++;
+                cellValue = ((decimal)((decimal)student.grades[1] / 10m));
+                excelSheet.Cells[rowNumber, auxColumNumber] = cellValue.ToString();
+                auxColumNumber++;
+                cellValue = (student.isAproved() ? 1m : 0m);
+                excelSheet.Cells[rowNumber, auxColumNumber] = cellValue.ToString();
+                auxColumNumber++;
+                for (int i = 0; i < 101; i++)
+                {
+
+                    cellValue = ((decimal)((decimal) student.grades[0] / 10m) * ((100m - ((decimal)i)) / 100m)) + ((decimal)((decimal)student.grades[1] / 10m) * (((decimal)i) / 100m));
+                    excelSheet.Cells[rowNumber, auxColumNumber] = cellValue.ToString();
+                    cellValue = ((Decimal.Compare(cellValue, ((decimal) minGrade / 10m)) < 0) ? 0m : 1m);
+                    excelSheet.Cells[rowNumber, auxColumNumber + 101] = cellValue.ToString();
+                    cellValue = ((Decimal.Compare(cellValue, (student.isAproved() ? 1m : 0m)) == 0) ? 1m : 0m);
+                    excelSheet.Cells[rowNumber, auxColumNumber + 202] = cellValue.ToString();
+
+                    auxColumNumber++;
+                };
+            }
+
+            myExcel.Visible = true;
+        }
+        private void printPosibleWeights(Excel.Worksheet excelSheet, int gradesAmount, int columNumber, int rowNumber)
+        {
+            /*
+             * Excel.Intersect(worksheet.Range["1:1"], worksheet.UsedRange).Style.Orientation = Excel.XlOrientation.xlUpwards;
+             * just the cells, not the style
+             * Excel.Intersect(worksheet.Range["1:1"], worksheet.UsedRange).Cells.Orientation = Excel.XlOrientation.xlUpwards;
+            */
+            int auxColumNumber = columNumber;
+            decimal cellValue;
+            for (int i = 0; i < 101; i++)
+            {
+                cellValue = ((100m - ((decimal)i)) / 100m);
+                excelSheet.Cells[rowNumber, auxColumNumber] = "ω1 = " + cellValue.ToString();
+                auxColumNumber++;
+            };
+            auxColumNumber = columNumber;
+            rowNumber++;
+            for (int i = 0; i < 101; i++)
+            {
+                cellValue = (((decimal)i) / 100m);
+                excelSheet.Cells[rowNumber, auxColumNumber] = "ω2 = " + cellValue.ToString();
+                auxColumNumber++;
+            };
+        }
+        private void printHeadersPosible(Excel.Worksheet excelSheet, int gradesAmount, int columNumber, int rowNumber)
+        {
+            int auxColumNumber = columNumber;
+            for (int i = 0; i < gradesAmount; i++)
+            {
+                excelSheet.Cells[rowNumber, auxColumNumber- gradesAmount] = "x" + (i + 1);
+                auxColumNumber++;
+            }
+            auxColumNumber = columNumber;
+            excelSheet.Cells[rowNumber, auxColumNumber] = "s";
+            auxColumNumber++;
+            for (int i = 0; i < 101; i++)
+            {
+                excelSheet.Cells[rowNumber, auxColumNumber] = "n" + (i + 1);
+                auxColumNumber++;
+            }
+            for (int i = 0; i < 101; i++)
+            {
+                excelSheet.Cells[rowNumber, auxColumNumber] = "y" + (i + 1);
+                auxColumNumber++;
+            }
+            for (int i = 0; i < 101; i++)
+            {
+                excelSheet.Cells[rowNumber, auxColumNumber] = "e" + (i + 1);
+                auxColumNumber++;
+            }
         }
         private void generateExcel()
         {
@@ -185,7 +460,7 @@ namespace App
                 foreach (int grade in student.grades)
                 {
                     objCell = excelSheet.Range[columName + rowNumber.ToString(), Type.Missing];
-                    decimalGrade = grade / 10;
+                    decimalGrade = (float) Math.Round((grade / 10f), 4);
                     objCell.Value = decimalGrade;
                     columName++;
                 }
@@ -261,6 +536,10 @@ namespace App
                 {
                     finalGrade += grades[i] * weights[i];
                 }
+            }
+            public void setAproved(bool aproved)
+            {
+                this.aproved = aproved;
             }
             public void setAproved(float minGrade)
             {
